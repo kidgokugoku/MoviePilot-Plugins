@@ -254,7 +254,7 @@ class TrManager(_PluginBase):
                     resumed_count += 1
 
             # 处理未完成种子
-            elif self._delete_incomplete and torrent.get("progress") < 100:
+            elif self._delete_incomplete and torrent.get("progress") == 0:
                 if self._tr.delete_torrents(
                     delete_file=True, ids=[torrent.get("id")]
                 ):
