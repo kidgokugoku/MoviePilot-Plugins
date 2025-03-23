@@ -1,9 +1,10 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.core.config import settings
 from app.log import logger
 from app.plugins import _PluginBase
-from app.schemas import NotificationType
+from app.schemas import NotificationType, ServiceInfo
 from apscheduler.triggers.cron import CronTrigger
+from app.helper.downloader import DownloaderHelper
 from app.modules.transmission import Transmission
 
 
@@ -31,19 +32,47 @@ class TrManager(_PluginBase):
     _enabled = False
     _cron = None
     _notify = False
+    _tr_name = None
     _tr = None
     _delete_incomplete = False
+    _downloader_helper = None
 
     def init_plugin(self, config: dict = None):
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._cron = config.get("cron")
+            self._tr_name = config.get("tr_name")
             self._delete_incomplete = config.get("delete_incomplete")
-            self._tr = Transmission()
+            self._downloader_helper = DownloaderHelper()
+
+            # 初始化下载器
+            if self._tr_name:
+                service = self.service_info(self._tr_name)
+                if service and service.instance:
+                    self._tr = service.instance
+
+    def service_info(self, name: str) -> Optional[ServiceInfo]:
+        """
+        获取下载器服务信息
+        """
+        if not name:
+            logger.warning("尚未配置下载器，请检查配置")
+            return None
+
+        service = self._downloader_helper.get_service(name)
+        if not service or not service.instance:
+            logger.warning(f"获取下载器 {name} 实例失败，请检查配置")
+            return None
+
+        if service.instance.is_inactive():
+            logger.warning(f"下载器 {name} 未连接，请检查配置")
+            return None
+
+        return service
 
     def get_state(self) -> bool:
-        return True if self._enabled and self._cron else False
+        return True if self._enabled and self._cron and self._tr else False
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -66,6 +95,16 @@ class TrManager(_PluginBase):
         return []
 
     def get_form(self) -> List[dict]:
+        downloader_options = (
+            [
+                {"title": config.name, "value": config.name}
+                for config in self._downloader_helper.get_configs().values()
+                if config.type == "transmission"
+            ]
+            if self._downloader_helper
+            else []
+        )
+
         return [
             {
                 "component": "VForm",
@@ -127,6 +166,25 @@ class TrManager(_PluginBase):
                                         "props": {
                                             "model": "delete_incomplete",
                                             "label": "删除未完成种子",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {"cols": 12},
+                                "content": [
+                                    {
+                                        "component": "VSelect",
+                                        "props": {
+                                            "model": "tr_name",
+                                            "label": "Transmission下载器",
+                                            "items": downloader_options,
                                         },
                                     }
                                 ],
