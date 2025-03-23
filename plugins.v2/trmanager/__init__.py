@@ -55,7 +55,7 @@ class TrManager(_PluginBase):
                     self._tr = service.instance
 
             # 如果启用了立即运行
-            if self._enabled and self._onlyonce and self._tr:
+            if self._onlyonce and self._tr:
                 self.manage_torrents()
                 # 运行后重置该标志
                 self._onlyonce = False
