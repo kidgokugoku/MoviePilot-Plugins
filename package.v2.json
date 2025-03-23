@@ -3,7 +3,7 @@
     "name": "TR做种管理",
     "description": "定时恢复TR下载器中已完成的暂停种子,删除未完成种子。",
     "labels": "下载管理,Transmission",
-    "version": "1.0",
+    "version": "2.1.0",
     "icon": "Transmission_A.png",
     "author": "kidgokugoku",
     "level": 1,
