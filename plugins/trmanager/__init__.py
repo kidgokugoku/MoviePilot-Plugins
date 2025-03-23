@@ -15,7 +15,7 @@ class TrManager(_PluginBase):
     # 插件图标
     plugin_icon = "Transmission_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1.0"
     # 插件作者
     plugin_author = "kidgokugoku"
     # 作者主页
@@ -44,6 +44,10 @@ class TrManager(_PluginBase):
 
     def get_state(self) -> bool:
         return True if self._enabled and self._cron else False
+
+    @staticmethod
+    def get_command() -> List[Dict[str, Any]]:
+        pass
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
@@ -206,3 +210,12 @@ class TrManager(_PluginBase):
             return []
 
         return torrents
+
+    def get_page(self) -> List[dict]:
+        pass
+
+    def stop_service(self):
+        """
+        退出插件
+        """
+        pass
