@@ -221,7 +221,6 @@ class TrManager(_PluginBase):
             ):
                 if self._tr.start_torrents(ids=[torrent.get("id")]):
                     resumed_count += 1
-                    logger.info(f"已恢复种子: {torrent.get("name")}")
 
             # 处理未完成种子
             elif self._delete_incomplete and torrent.get("progress") < 100:
@@ -229,7 +228,6 @@ class TrManager(_PluginBase):
                     delete_file=True, ids=[torrent.get("id")]
                 ):
                     deleted_count += 1
-                    logger.info(f"已删除未完成种子: {torrent.get("name")}")
 
         # 发送通知
         if self._notify:
@@ -259,12 +257,7 @@ class TrManager(_PluginBase):
 
         if not torrents:
             logger.warning("TR没有种子")
-            if self._notify:
-                self.post_message(
-                    mtype=NotificationType.SiteMessage,
-                    title="【TR做种管理】",
-                    text="TR中没有种子",
-                )
+
             return []
 
         return torrents
