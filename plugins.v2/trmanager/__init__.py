@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from app.core.config import settings
 from app.log import logger
 from app.plugins import _PluginBase
@@ -35,22 +35,30 @@ class TrManager(_PluginBase):
     _tr_name = None
     _tr = None
     _delete_incomplete = False
-    _downloader_helper = None
+    _onlyonce = False
+    downloader_helper = None
 
     def init_plugin(self, config: dict = None):
+        self.downloader_helper = DownloaderHelper()
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._cron = config.get("cron")
             self._tr_name = config.get("tr_name")
             self._delete_incomplete = config.get("delete_incomplete")
-            self._downloader_helper = DownloaderHelper()
+            self._onlyonce = config.get("onlyonce")
 
             # 初始化下载器
             if self._tr_name:
                 service = self.service_info(self._tr_name)
                 if service and service.instance:
                     self._tr = service.instance
+
+            # 如果启用了立即运行
+            if self._enabled and self._onlyonce and self._tr:
+                self.manage_torrents()
+                # 运行后重置该标志
+                self._onlyonce = False
 
     def service_info(self, name: str) -> Optional[ServiceInfo]:
         """
@@ -60,7 +68,7 @@ class TrManager(_PluginBase):
             logger.warning("尚未配置下载器，请检查配置")
             return None
 
-        service = self._downloader_helper.get_service(name)
+        service = self.downloader_helper.get_service(name)
         if not service or not service.instance:
             logger.warning(f"获取下载器 {name} 实例失败，请检查配置")
             return None
@@ -97,16 +105,11 @@ class TrManager(_PluginBase):
             ]
         return []
 
-    def get_form(self) -> List[dict]:
-        downloader_options = (
-            [
-                {"title": config.name, "value": config.name}
-                for config in self._downloader_helper.get_configs().values()
-                if config.type == "transmission"
-            ]
-            if self._downloader_helper
-            else []
-        )
+    def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
+        downloader_options = [
+            {"title": config.name, "value": config.name}
+            for config in self.downloader_helper.get_configs().values()
+        ]
 
         return [
             {
@@ -180,6 +183,24 @@ class TrManager(_PluginBase):
                         "content": [
                             {
                                 "component": "VCol",
+                                "props": {"cols": 12, "md": 6},
+                                "content": [
+                                    {
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "onlyonce",
+                                            "label": "立即运行一次",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
                                 "props": {"cols": 12},
                                 "content": [
                                     {
@@ -196,7 +217,14 @@ class TrManager(_PluginBase):
                     },
                 ],
             }
-        ]
+        ], {
+            "enabled": False,
+            "notify": False,
+            "cron": "0 */1 * * *",
+            "delete_incomplete": False,
+            "tr_name": "",
+            "onlyonce": False,
+        }
 
     def manage_torrents(self):
         """
